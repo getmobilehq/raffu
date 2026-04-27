@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #272727;
+  --color-primary-contrast: #F5F0E8;
+  --color-accent: #D4AA7D;
+  --color-bg: #F5F0E8;
+  --color-surface: #FFFFFF;
+  --color-text: #272727;
+  --color-text-muted: #9E8E78;
+  --color-border: #E4DCCE;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading), Georgia, serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+/* Reusable component classes */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded font-medium text-[0.9375rem] transition-all active:translate-y-px;
+  }
+  .btn-primary {
+    @apply bg-shadow text-off-white hover:bg-black;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-shadow border border-shadow hover:bg-shadow hover:text-off-white;
+  }
+  .btn-lg {
+    @apply px-8 py-4 text-base;
+  }
+  .btn-block {
+    @apply w-full;
+  }
+
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-wider text-mist;
+  }
+
+  .field-label {
+    @apply block text-xs font-medium uppercase tracking-wider text-mist mb-2;
+  }
+  .field-input {
+    @apply block w-full bg-white border border-border rounded px-4 py-3 text-base text-shadow transition-colors focus:outline-none focus:border-shadow;
+  }
+
+  .card {
+    @apply bg-white border border-border rounded-lg p-10;
+  }
+}
+
+/* Disable number input spinners for cleaner look */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
