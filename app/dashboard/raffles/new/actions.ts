@@ -70,8 +70,8 @@ export async function createRaffleAction(
   const prizeListRaw = String(formData.get('prizeList') ?? '').trim();
   const spinStyleRaw = formData.get('spinStyle');
 
-  const primaryColor = HEX.test(primaryColorRaw) ? primaryColorRaw : '#272727';
-  const accentColor = HEX.test(accentColorRaw) ? accentColorRaw : '#D4AA7D';
+  const primaryColor = HEX.test(primaryColorRaw) ? primaryColorRaw : '#E10A0A';
+  const accentColor = HEX.test(accentColorRaw) ? accentColorRaw : '#0050FF';
   const winnerMode: WinnerMode = isWinnerMode(winnerModeRaw)
     ? winnerModeRaw
     : 'count';

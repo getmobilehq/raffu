@@ -86,12 +86,12 @@ export default function NewRafflePage() {
             <ColorField
               id="primaryColor"
               label="Primary"
-              defaultValue={state.primaryColor ?? '#272727'}
+              defaultValue={state.primaryColor ?? '#E10A0A'}
             />
             <ColorField
               id="accentColor"
               label="Accent"
-              defaultValue={state.accentColor ?? '#D4AA7D'}
+              defaultValue={state.accentColor ?? '#0050FF'}
             />
           </div>
         </fieldset>
