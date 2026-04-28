@@ -79,8 +79,17 @@ function RafflesList({
   raffles: Array<{ id: string; name: string; slug: string; status: string; created_at: string }>;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      {raffles.map((r) => (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-heading font-bold text-2xl tracking-tight">
+          Your raffles
+        </h2>
+        <Link href="/dashboard/raffles/new" className="btn btn-primary">
+          Create raffle
+        </Link>
+      </div>
+      <div className="flex flex-col gap-3">
+        {raffles.map((r) => (
         <div
           key={r.id}
           className="bg-white border border-border rounded-lg px-6 py-5 flex items-center justify-between gap-4"
@@ -100,7 +109,8 @@ function RafflesList({
             Open
           </Link>
         </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
