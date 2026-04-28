@@ -66,18 +66,9 @@ function EmptyState() {
         Set up your first raffle in under two minutes. Name it, brand it, pick
         the winner rule. That&rsquo;s it.
       </p>
-      {/* v1.1: wire this button to create a raffles row and navigate
-          to /dashboard/raffles/[id]. Stubbed for now. */}
-      <button
-        disabled
-        className="btn btn-primary btn-lg opacity-60 cursor-not-allowed"
-        title="Raffle creation launches in the next build"
-      >
-        Create raffle &middot; coming in v1.1
-      </button>
-      <p className="mt-4 text-xs text-mist">
-        Auth is live. The raffle runner ships next.
-      </p>
+      <Link href="/dashboard/raffles/new" className="btn btn-primary btn-lg">
+        Create raffle
+      </Link>
     </div>
   );
 }
