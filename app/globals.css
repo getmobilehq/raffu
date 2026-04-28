@@ -40,10 +40,10 @@ h1, h2, h3, h4 {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded font-medium text-[0.9375rem] transition-all active:translate-y-px;
   }
   .btn-primary {
-    @apply bg-shadow text-off-white hover:bg-black;
+    @apply bg-brand text-off-white hover:bg-brand-dark;
   }
   .btn-ghost {
-    @apply bg-transparent text-shadow border border-shadow hover:bg-shadow hover:text-off-white;
+    @apply bg-transparent text-brand border border-brand hover:bg-brand hover:text-off-white;
   }
   .btn-lg {
     @apply px-8 py-4 text-base;

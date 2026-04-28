@@ -9,12 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Earthy Editorial palette (base brand)
+        // Earthy Editorial palette (base surfaces)
         shadow: '#272727',
         sand: '#D4AA7D',
         'off-white': '#F5F0E8',
         mist: '#9E8E78',
         border: '#E4DCCE',
+        // Action brand
+        brand: '#0050FF',
+        'brand-dark': '#003DD9',
       },
       fontFamily: {
         heading: ['var(--font-heading)', 'Georgia', 'serif'],
