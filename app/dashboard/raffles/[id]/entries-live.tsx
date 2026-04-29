@@ -120,7 +120,7 @@ function DeleteEntryButton({
       onClick={handleClick}
       disabled={pending}
       aria-label={`Remove ${entry.first_name} ${entry.last_name}`}
-      className="text-mist hover:text-brand transition-colors text-lg leading-none px-1 disabled:opacity-50"
+      className="text-mist hover:text-brand-red transition-colors text-lg leading-none px-1 disabled:opacity-50"
     >
       &times;
     </button>

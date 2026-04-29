@@ -29,7 +29,7 @@ export function DeleteRaffleButton({
       <input type="hidden" name="raffleId" value={raffleId} />
       <button
         type="submit"
-        className="text-sm font-medium text-mist hover:text-brand transition-colors"
+        className="text-sm font-medium text-mist hover:text-brand-red transition-colors"
       >
         Delete this raffle
       </button>

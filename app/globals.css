@@ -11,6 +11,9 @@
   --color-text: #272727;
   --color-text-muted: #9E8E78;
   --color-border: #E4DCCE;
+  /* Raffu brand colours — also exposed via CSS vars for non-Tailwind contexts. */
+  --color-brand-red: #E10A0A;
+  --color-brand-blue: #0050FF;
 }
 
 html, body {
@@ -40,10 +43,10 @@ h1, h2, h3, h4 {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded font-medium text-[0.9375rem] transition-all active:translate-y-px;
   }
   .btn-primary {
-    @apply bg-brand text-off-white hover:bg-brand-dark;
+    @apply bg-brand-red text-off-white hover:bg-[#B80808];
   }
   .btn-ghost {
-    @apply bg-transparent text-brand border border-brand hover:bg-brand hover:text-off-white;
+    @apply bg-transparent text-shadow border border-shadow hover:bg-shadow hover:text-off-white;
   }
   .btn-lg {
     @apply px-8 py-4 text-base;

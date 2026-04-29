@@ -9,17 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Earthy Editorial palette (base surfaces)
+        // Earthy Editorial substrate (text, borders, neutral surfaces).
+        // These STAY — they're the page substrate, not branding.
         shadow: '#272727',
         sand: '#D4AA7D',
         'off-white': '#F5F0E8',
         mist: '#9E8E78',
         border: '#E4DCCE',
-        // Brand identity
-        brand: '#E10A0A',
-        'brand-dark': '#B30808',
-        accent: '#0050FF',
-        'accent-dark': '#003DD9',
+        // Raffu brand colours — sit on top of the substrate.
+        // brand-red is the primary CTA colour. brand-blue is the accent.
+        // shadow stays as ink/text/borders — don't reach for brand-red there.
+        'brand-red': '#E10A0A',
+        'brand-blue': '#0050FF',
       },
       fontFamily: {
         heading: ['var(--font-heading)', 'Georgia', 'serif'],

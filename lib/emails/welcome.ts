@@ -22,7 +22,7 @@ function buildWelcomeEmailHtml({ firstName }: { firstName: string }) {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px; background:#FFFFFF; border:1px solid #E4DCCE; border-radius:12px; overflow:hidden;">
             <tr>
               <td style="padding:40px 40px 8px 40px;">
-                <div style="display:inline-block; width:36px; height:36px; border-radius:50%; background:#272727; color:#F5F0E8; text-align:center; line-height:36px; font-family: Georgia, serif; font-weight:900; font-size:16px;">R</div>
+                <div style="display:inline-block; width:36px; height:36px; border-radius:50%; background:#E10A0A; color:#F5F0E8; text-align:center; line-height:36px; font-family: Georgia, serif; font-weight:900; font-size:16px;">R</div>
                 <div style="font-family: Georgia, serif; font-weight:700; font-size:18px; margin-top:12px; letter-spacing:-0.02em;">Raffu</div>
               </td>
             </tr>
@@ -41,7 +41,7 @@ function buildWelcomeEmailHtml({ firstName }: { firstName: string }) {
             </tr>
             <tr>
               <td style="padding:0 40px 40px 40px;">
-                <a href="${appUrl}/dashboard" style="display:inline-block; background:#272727; color:#F5F0E8; padding:14px 28px; border-radius:4px; text-decoration:none; font-weight:500; font-size:15px;">Open your dashboard</a>
+                <a href="${appUrl}/dashboard" style="display:inline-block; background:#E10A0A; color:#F5F0E8; padding:14px 28px; border-radius:4px; text-decoration:none; font-weight:500; font-size:15px;">Open your dashboard</a>
               </td>
             </tr>
             <tr>
