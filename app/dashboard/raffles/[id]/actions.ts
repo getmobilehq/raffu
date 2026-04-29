@@ -52,6 +52,21 @@ export async function reopenRaffleAction(formData: FormData) {
   redirect(`/dashboard/raffles/${raffleId}`);
 }
 
+export async function deleteEntryAction(entryId: string) {
+  if (!entryId) return;
+
+  const supabase = createClient();
+
+  // RLS (entries_owner_delete) enforces both ownership and status='collecting'.
+  // No row matches if the caller isn't the owner or the raffle has moved on.
+  const { error } = await supabase
+    .from('entries')
+    .delete()
+    .eq('id', entryId);
+
+  if (error) throw new Error(error.message);
+}
+
 export async function startDrawAction(formData: FormData) {
   const raffleId = String(formData.get('raffleId') ?? '');
   if (!raffleId) return;

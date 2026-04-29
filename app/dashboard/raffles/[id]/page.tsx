@@ -139,6 +139,7 @@ export default async function RaffleAdminPage({
           <EntriesLive
             raffleId={raffle.id}
             initialEntries={entries ?? []}
+            canDelete={isCollecting}
           />
         </div>
       </div>

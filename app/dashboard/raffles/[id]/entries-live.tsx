@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { deleteEntryAction } from './actions';
 
 export interface Entry {
   id: string;
@@ -13,9 +14,11 @@ export interface Entry {
 export function EntriesLive({
   raffleId,
   initialEntries,
+  canDelete,
 }: {
   raffleId: string;
   initialEntries: Entry[];
+  canDelete: boolean;
 }) {
   const [entries, setEntries] = useState<Entry[]>(initialEntries);
 
@@ -45,6 +48,10 @@ export function EntriesLive({
     };
   }, [raffleId]);
 
+  function removeFromState(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  }
+
   if (entries.length === 0) {
     return (
       <div className="border border-dashed border-border rounded-lg px-6 py-12 text-center bg-white">
@@ -64,18 +71,59 @@ export function EntriesLive({
         {entries.map((e) => (
           <li
             key={e.id}
-            className="px-5 py-3 flex items-center justify-between"
+            className="px-5 py-3 flex items-center justify-between gap-3"
           >
             <span className="text-shadow">
               {e.first_name} {e.last_name}
             </span>
-            <span className="text-xs text-mist">
-              {formatTime(e.created_at)}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-mist">
+                {formatTime(e.created_at)}
+              </span>
+              {canDelete && (
+                <DeleteEntryButton
+                  entry={e}
+                  onDeleted={() => removeFromState(e.id)}
+                />
+              )}
+            </div>
           </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+function DeleteEntryButton({
+  entry,
+  onDeleted,
+}: {
+  entry: Entry;
+  onDeleted: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  function handleClick() {
+    const ok = window.confirm(
+      `Remove ${entry.first_name} ${entry.last_name} from this raffle?`
+    );
+    if (!ok) return;
+    startTransition(async () => {
+      await deleteEntryAction(entry.id);
+      onDeleted();
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={pending}
+      aria-label={`Remove ${entry.first_name} ${entry.last_name}`}
+      className="text-mist hover:text-brand transition-colors text-lg leading-none px-1 disabled:opacity-50"
+    >
+      &times;
+    </button>
   );
 }
 
