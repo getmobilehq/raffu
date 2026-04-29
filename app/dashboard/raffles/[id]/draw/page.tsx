@@ -16,6 +16,7 @@ interface RaffleRow {
   winner_mode: string;
   winner_count: number;
   winner_percent: number;
+  current_round: number;
 }
 
 interface EntryRow {
@@ -34,7 +35,7 @@ export default async function DrawPage({
   const { data: raffle } = await supabase
     .from('raffles')
     .select(
-      'id, name, slug, status, primary_color, accent_color, prize_mode, prize_text, prize_list, winner_mode, winner_count, winner_percent'
+      'id, name, slug, status, primary_color, accent_color, prize_mode, prize_text, prize_list, winner_mode, winner_count, winner_percent, current_round'
     )
     .eq('id', params.id)
     .maybeSingle<RaffleRow>();
@@ -52,21 +53,33 @@ export default async function DrawPage({
     .eq('raffle_id', raffle.id)
     .order('created_at', { ascending: true });
 
-  const pool: PoolEntry[] = entries ?? [];
+  const allEntries: EntryRow[] = entries ?? [];
 
-  // Idempotency: if winners are already persisted, reuse them.
-  const { data: existing } = await supabase
+  // All winners across every round — used both for past-winner exclusion
+  // and to render past rounds' winners statically alongside the current draw.
+  const { data: allWinners } = await supabase
     .from('winners')
-    .select('entry_id, position, prize')
+    .select('entry_id, position, prize, round')
     .eq('raffle_id', raffle.id)
+    .order('round', { ascending: true })
     .order('position', { ascending: true });
+
+  const winnerEntryIds = new Set((allWinners ?? []).map((w) => w.entry_id));
+
+  // Pool excludes anyone who has ever won this raffle.
+  const pool: PoolEntry[] = allEntries.filter((e) => !winnerEntryIds.has(e.id));
+
+  // Idempotency is now scoped to the current round.
+  const currentRoundWinners = (allWinners ?? []).filter(
+    (w) => w.round === raffle.current_round
+  );
 
   let revealed: RevealedWinner[];
   let freshDraw = false;
 
-  if (existing && existing.length > 0) {
-    revealed = existing.map((w) => {
-      const entry = pool.find((e) => e.id === w.entry_id);
+  if (currentRoundWinners.length > 0) {
+    revealed = currentRoundWinners.map((w) => {
+      const entry = allEntries.find((e) => e.id === w.entry_id);
       return {
         position: w.position,
         first_name: entry?.first_name ?? 'Unknown',
@@ -91,10 +104,19 @@ export default async function DrawPage({
       </Link>
 
       <div className="mt-6 mb-12">
-        <p className="eyebrow mb-4">Draw</p>
+        <p className="eyebrow mb-4">
+          {raffle.current_round > 1
+            ? `Round ${raffle.current_round}`
+            : 'Draw'}
+        </p>
         <h1 className="font-heading font-bold text-4xl md:text-5xl tracking-tighter">
           {raffle.name}
         </h1>
+        {pool.length === 0 && allEntries.length > 0 && (
+          <p className="text-mist mt-3 leading-relaxed">
+            Everyone who entered has already won a previous round.
+          </p>
+        )}
       </div>
 
       <DrawStage
@@ -133,6 +155,7 @@ async function drawAndPersist(
     raffle_id: raffle.id,
     entry_id: entry.id,
     position: i + 1,
+    round: raffle.current_round,
     prize: prizes[i],
   }));
 

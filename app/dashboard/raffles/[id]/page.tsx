@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { EntriesLive } from './entries-live';
 import { startDrawAction } from './actions';
 import { DeleteRaffleButton } from './delete-raffle-button';
+import { ReopenRaffleButton } from './reopen-raffle-button';
 
 export default async function RaffleAdminPage({
   params,
@@ -65,14 +66,22 @@ export default async function RaffleAdminPage({
             <StatusBadge status={raffle.status} />
           </p>
         </div>
-        {isDrawing || isComplete ? (
-          <Link
-            href={`/dashboard/raffles/${raffle.id}/draw`}
-            className="btn btn-primary"
-          >
-            {isComplete ? 'View results' : 'Open draw'}
-          </Link>
-        ) : null}
+        {(isDrawing || isComplete) && (
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/dashboard/raffles/${raffle.id}/draw`}
+              className={isComplete ? 'btn btn-ghost' : 'btn btn-primary'}
+            >
+              {isComplete ? 'View results' : 'Open draw'}
+            </Link>
+            {isComplete && (
+              <ReopenRaffleButton
+                raffleId={raffle.id}
+                raffleName={raffle.name}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-[280px_1fr] gap-8">
