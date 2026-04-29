@@ -55,7 +55,7 @@ export default async function RaffleAdminPage({
         &larr; Dashboard
       </Link>
 
-      <div className="mt-6 mb-12 flex items-start justify-between gap-6">
+      <div className="mt-6 mb-12 flex items-start justify-between gap-6 flex-wrap">
         <div>
           <p className="eyebrow mb-4">Raffle</p>
           <h1 className="font-heading font-bold text-4xl md:text-5xl tracking-tighter mb-3">
@@ -66,22 +66,28 @@ export default async function RaffleAdminPage({
             <StatusBadge status={raffle.status} />
           </p>
         </div>
-        {(isDrawing || isComplete) && (
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            href={`/dashboard/raffles/${raffle.id}/edit`}
+            className="btn btn-ghost"
+          >
+            Edit
+          </Link>
+          {(isDrawing || isComplete) && (
             <Link
               href={`/dashboard/raffles/${raffle.id}/draw`}
               className={isComplete ? 'btn btn-ghost' : 'btn btn-primary'}
             >
               {isComplete ? 'View results' : 'Open draw'}
             </Link>
-            {isComplete && (
-              <ReopenRaffleButton
-                raffleId={raffle.id}
-                raffleName={raffle.name}
-              />
-            )}
-          </div>
-        )}
+          )}
+          {isComplete && (
+            <ReopenRaffleButton
+              raffleId={raffle.id}
+              raffleName={raffle.name}
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-[280px_1fr] gap-8">
@@ -137,11 +143,13 @@ export default async function RaffleAdminPage({
         </div>
       </div>
 
-      {isComplete && (
-        <div className="mt-16 pt-8 border-t border-border">
-          <DeleteRaffleButton raffleId={raffle.id} raffleName={raffle.name} />
-        </div>
-      )}
+      <div className="mt-16 pt-8 border-t border-border">
+        <DeleteRaffleButton
+          raffleId={raffle.id}
+          raffleName={raffle.name}
+          status={raffle.status}
+        />
+      </div>
     </div>
   );
 }

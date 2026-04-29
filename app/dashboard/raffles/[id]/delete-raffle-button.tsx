@@ -5,15 +5,23 @@ import { deleteRaffleAction } from './actions';
 export function DeleteRaffleButton({
   raffleId,
   raffleName,
+  status,
 }: {
   raffleId: string;
   raffleName: string;
+  status: string;
 }) {
   function onSubmit(e: React.FormEvent) {
-    const ok = window.confirm(
-      `Delete "${raffleName}"? This also removes all entries and winners. This cannot be undone.`
-    );
-    if (!ok) e.preventDefault();
+    const message =
+      status === 'collecting'
+        ? `Delete "${raffleName}"? Entries received so far will be lost. This cannot be undone.`
+        : status === 'drawing'
+        ? `Delete "${raffleName}"? You're mid-draw — entries and any drawn winners will be lost. This cannot be undone.`
+        : status === 'complete'
+        ? `Delete "${raffleName}"? This also removes all entries and winners. This cannot be undone.`
+        : `Delete "${raffleName}"? This cannot be undone.`;
+
+    if (!window.confirm(message)) e.preventDefault();
   }
 
   return (
