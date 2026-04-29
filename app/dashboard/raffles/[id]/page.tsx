@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { createClient } from '@/lib/supabase/server';
 import { EntriesLive } from './entries-live';
 import { startDrawAction } from './actions';
+import { DeleteRaffleButton } from './delete-raffle-button';
 
 export default async function RaffleAdminPage({
   params,
@@ -126,6 +127,12 @@ export default async function RaffleAdminPage({
           />
         </div>
       </div>
+
+      {isComplete && (
+        <div className="mt-16 pt-8 border-t border-border">
+          <DeleteRaffleButton raffleId={raffle.id} raffleName={raffle.name} />
+        </div>
+      )}
     </div>
   );
 }
