@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
+import { spinWheel } from '@/lib/raffle/spin-wheel';
 import { completeRaffleAction } from './actions';
 
 export interface PoolEntry {
@@ -11,6 +12,7 @@ export interface PoolEntry {
 }
 
 export interface RevealedWinner {
+  entry_id: string;
   position: number;
   first_name: string;
   last_name: string;
@@ -21,6 +23,8 @@ type Phase = 'idle' | 'spinning' | 'revealed' | 'done';
 
 const SPIN_TOTAL_MS = 2800;
 const REVEAL_HOLD_MS = 1800;
+// Wheel runs ~6s per spec; let it land before the reveal hold.
+const WHEEL_HOLD_MS = 1800;
 
 export function DrawStage({
   raffleId,
@@ -28,6 +32,7 @@ export function DrawStage({
   winners,
   primaryColor,
   accentColor,
+  spinStyle,
   freshDraw,
 }: {
   raffleId: string;
@@ -35,6 +40,7 @@ export function DrawStage({
   winners: RevealedWinner[];
   primaryColor: string;
   accentColor: string;
+  spinStyle: string;
   freshDraw: boolean;
 }) {
   // On refresh after a draw, skip the animation entirely.
@@ -50,6 +56,7 @@ export function DrawStage({
   );
 
   const tickRef = useRef<number | null>(null);
+  const wheelCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Reel cycling during 'spinning'.
   useEffect(() => {
@@ -57,6 +64,34 @@ export function DrawStage({
     if (pool.length === 0 || winners.length === 0) return;
 
     const target = winners[currentIdx];
+
+    // ── Wheel branch ──────────────────────────────────────────────────────
+    if (spinStyle === 'wheel') {
+      const canvas = wheelCanvasRef.current;
+      const winnerIndex = pool.findIndex((p) => p.id === target.entry_id);
+      if (!canvas || winnerIndex < 0) {
+        // Canvas not mounted yet, or winner not in pool (shouldn't happen
+        // — if we reach this branch the data is malformed). Skip animation
+        // and reveal so the show goes on.
+        setPhase('revealed');
+        return;
+      }
+      const handle = spinWheel({
+        canvas,
+        entries: pool.map((p) => ({
+          id: p.id,
+          firstName: p.first_name,
+          lastName: p.last_name,
+        })),
+        winnerIndex,
+        primaryColor,
+        accentColor,
+        onComplete: () => setPhase('revealed'),
+      });
+      return () => handle.cancel();
+    }
+
+    // ── Slot/flash/shuffle branch (existing reel) ─────────────────────────
     const start = performance.now();
     let interval = 50;
 
@@ -78,7 +113,7 @@ export function DrawStage({
     return () => {
       if (tickRef.current !== null) window.clearTimeout(tickRef.current);
     };
-  }, [phase, currentIdx, pool, winners]);
+  }, [phase, currentIdx, pool, winners, spinStyle, primaryColor, accentColor]);
 
   // After reveal: confetti, then advance.
   useEffect(() => {
@@ -133,16 +168,41 @@ export function DrawStage({
           <p className="eyebrow mb-4">
             Winner #{currentWinner.position} of {winners.length}
           </p>
-          <div
-            className={`font-heading font-bold text-5xl md:text-7xl tracking-tighter min-h-[6rem] md:min-h-[8rem] flex items-center justify-center transition-all ${
-              phase === 'revealed' ? 'scale-110' : ''
-            }`}
-            style={{
-              color: phase === 'revealed' ? primaryColor : 'inherit',
-            }}
-          >
-            {reelName}
-          </div>
+
+          {spinStyle === 'wheel' ? (
+            <>
+              <div
+                className="mx-auto"
+                style={{ maxWidth: 520, aspectRatio: '1 / 1' }}
+              >
+                <canvas
+                  ref={wheelCanvasRef}
+                  className="block w-full h-full"
+                  aria-label="Spinning wheel of entries"
+                />
+              </div>
+              {phase === 'revealed' && (
+                <div
+                  className="font-heading font-bold text-3xl md:text-5xl tracking-tighter mt-6 transition-all"
+                  style={{ color: primaryColor }}
+                >
+                  {currentWinner.first_name} {currentWinner.last_name}
+                </div>
+              )}
+            </>
+          ) : (
+            <div
+              className={`font-heading font-bold text-5xl md:text-7xl tracking-tighter min-h-[6rem] md:min-h-[8rem] flex items-center justify-center transition-all ${
+                phase === 'revealed' ? 'scale-110' : ''
+              }`}
+              style={{
+                color: phase === 'revealed' ? primaryColor : 'inherit',
+              }}
+            >
+              {reelName}
+            </div>
+          )}
+
           {currentWinner.prize && phase === 'revealed' && (
             <p className="text-mist mt-4 text-lg">{currentWinner.prize}</p>
           )}

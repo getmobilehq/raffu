@@ -17,6 +17,7 @@ interface RaffleRow {
   winner_count: number;
   winner_percent: number;
   current_round: number;
+  spin_style: string;
 }
 
 interface EntryRow {
@@ -35,7 +36,7 @@ export default async function DrawPage({
   const { data: raffle } = await supabase
     .from('raffles')
     .select(
-      'id, name, slug, status, primary_color, accent_color, prize_mode, prize_text, prize_list, winner_mode, winner_count, winner_percent, current_round'
+      'id, name, slug, status, primary_color, accent_color, prize_mode, prize_text, prize_list, winner_mode, winner_count, winner_percent, current_round, spin_style'
     )
     .eq('id', params.id)
     .maybeSingle<RaffleRow>();
@@ -81,6 +82,7 @@ export default async function DrawPage({
     revealed = currentRoundWinners.map((w) => {
       const entry = allEntries.find((e) => e.id === w.entry_id);
       return {
+        entry_id: w.entry_id,
         position: w.position,
         first_name: entry?.first_name ?? 'Unknown',
         last_name: entry?.last_name ?? '',
@@ -125,6 +127,7 @@ export default async function DrawPage({
         winners={revealed}
         primaryColor={raffle.primary_color}
         accentColor={raffle.accent_color}
+        spinStyle={raffle.spin_style}
         freshDraw={freshDraw}
       />
     </div>
@@ -163,6 +166,7 @@ async function drawAndPersist(
   if (error) throw new Error(`Failed to persist winners: ${error.message}`);
 
   return picked.map((entry, i) => ({
+    entry_id: entry.id,
     position: i + 1,
     first_name: entry.first_name,
     last_name: entry.last_name,
