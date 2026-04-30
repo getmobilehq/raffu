@@ -39,8 +39,8 @@ export interface SpinWheelHandle {
 
 const SHADOW = '#272727';
 const OFF_WHITE = '#F5F0E8';
-const SPIN_DURATION_MS = 6000;
-const SPIN_FULL_ROTATIONS = 5;
+const SPIN_DURATION_MS = 12000;
+const SPIN_FULL_ROTATIONS = 10;
 const REDUCED_MOTION_FADE_MS = 200;
 const POINTER_HEIGHT = 24;
 
