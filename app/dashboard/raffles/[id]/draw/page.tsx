@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { DrawStage, type PoolEntry, type RevealedWinner } from './draw-stage';
-import { computeTargetCount } from './actions';
+import { computeTargetCount } from '@/lib/raffle/winner-count';
 
 interface RaffleRow {
   id: string;

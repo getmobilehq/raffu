@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { computeTargetCount } from '@/lib/raffle/winner-count';
 
 export interface DrawnWinner {
   entry_id: string;
@@ -128,23 +129,6 @@ export async function completeRaffleAction(formData: FormData) {
 // -----------------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------------
-
-interface RaffleForCount {
-  winner_mode: string;
-  winner_count: number;
-  winner_percent: number;
-}
-
-export function computeTargetCount(
-  raffle: RaffleForCount,
-  poolSize: number
-): number {
-  const target =
-    raffle.winner_mode === 'count'
-      ? raffle.winner_count
-      : Math.ceil((poolSize * raffle.winner_percent) / 100);
-  return Math.max(1, Math.min(target, poolSize));
-}
 
 function prizeForPosition(
   raffle: {
