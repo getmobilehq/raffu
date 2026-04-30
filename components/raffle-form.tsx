@@ -202,7 +202,7 @@ export function RaffleForm({
 
       <fieldset className="mb-10">
         <legend className="field-label">Draw animation</legend>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <RadioCard
             name="spinStyle"
             value="slot"
@@ -226,6 +226,14 @@ export function RaffleForm({
             hint="Cards shuffle"
             checked={spinStyle === 'shuffle'}
             onChange={() => setSpinStyle('shuffle')}
+          />
+          <RadioCard
+            name="spinStyle"
+            value="wheel"
+            label="Wheel"
+            hint="Classic wheel of names"
+            checked={spinStyle === 'wheel'}
+            onChange={() => setSpinStyle('wheel')}
           />
         </div>
       </fieldset>

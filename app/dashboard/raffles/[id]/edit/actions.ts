@@ -19,7 +19,7 @@ function isPrizeMode(v: unknown): v is PrizeMode {
   return v === 'same' || v === 'per';
 }
 function isSpinStyle(v: unknown): v is SpinStyle {
-  return v === 'slot' || v === 'flash' || v === 'shuffle';
+  return v === 'slot' || v === 'flash' || v === 'shuffle' || v === 'wheel';
 }
 
 export async function updateRaffleAction(

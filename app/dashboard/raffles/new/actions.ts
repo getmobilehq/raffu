@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export type WinnerMode = 'count' | 'percent';
 export type PrizeMode = 'same' | 'per';
-export type SpinStyle = 'slot' | 'flash' | 'shuffle';
+export type SpinStyle = 'slot' | 'flash' | 'shuffle' | 'wheel';
 
 export interface RaffleSetupState {
   error?: string;
@@ -52,7 +52,7 @@ function isPrizeMode(v: unknown): v is PrizeMode {
   return v === 'same' || v === 'per';
 }
 function isSpinStyle(v: unknown): v is SpinStyle {
-  return v === 'slot' || v === 'flash' || v === 'shuffle';
+  return v === 'slot' || v === 'flash' || v === 'shuffle' || v === 'wheel';
 }
 
 export async function createRaffleAction(
