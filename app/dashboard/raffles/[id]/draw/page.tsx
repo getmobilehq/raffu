@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { DrawStage, type PoolEntry, type RevealedWinner } from './draw-stage';
+import { computeTargetCount } from './actions';
 
 interface RaffleRow {
   id: string;
@@ -18,12 +19,6 @@ interface RaffleRow {
   winner_percent: number;
   current_round: number;
   spin_style: string;
-}
-
-interface EntryRow {
-  id: string;
-  first_name: string;
-  last_name: string;
 }
 
 export default async function DrawPage({
@@ -54,10 +49,8 @@ export default async function DrawPage({
     .eq('raffle_id', raffle.id)
     .order('created_at', { ascending: true });
 
-  const allEntries: EntryRow[] = entries ?? [];
+  const allEntries = entries ?? [];
 
-  // All winners across every round — used both for past-winner exclusion
-  // and to render past rounds' winners statically alongside the current draw.
   const { data: allWinners } = await supabase
     .from('winners')
     .select('entry_id, position, prize, round')
@@ -67,19 +60,13 @@ export default async function DrawPage({
 
   const winnerEntryIds = new Set((allWinners ?? []).map((w) => w.entry_id));
 
-  // Pool excludes anyone who has ever won this raffle.
+  // Pool excludes anyone who has ever won this raffle (any round).
   const pool: PoolEntry[] = allEntries.filter((e) => !winnerEntryIds.has(e.id));
 
-  // Idempotency is now scoped to the current round.
-  const currentRoundWinners = (allWinners ?? []).filter(
-    (w) => w.round === raffle.current_round
-  );
-
-  let revealed: RevealedWinner[];
-  let freshDraw = false;
-
-  if (currentRoundWinners.length > 0) {
-    revealed = currentRoundWinners.map((w) => {
+  // Already-drawn winners for the current round (hydrated into the side panel).
+  const drawnWinners: RevealedWinner[] = (allWinners ?? [])
+    .filter((w) => w.round === raffle.current_round)
+    .map((w) => {
       const entry = allEntries.find((e) => e.id === w.entry_id);
       return {
         entry_id: w.entry_id,
@@ -89,12 +76,8 @@ export default async function DrawPage({
         prize: w.prize,
       };
     });
-  } else if (pool.length === 0) {
-    revealed = [];
-  } else {
-    revealed = await drawAndPersist(supabase, raffle, pool);
-    freshDraw = true;
-  }
+
+  const targetCount = computeTargetCount(raffle, allEntries.length);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-14">
@@ -114,9 +97,11 @@ export default async function DrawPage({
         <h1 className="font-heading font-bold text-4xl md:text-5xl tracking-tighter">
           {raffle.name}
         </h1>
-        {pool.length === 0 && allEntries.length > 0 && (
+        {pool.length === 0 && drawnWinners.length === 0 && (
           <p className="text-mist mt-3 leading-relaxed">
-            Everyone who entered has already won a previous round.
+            {allEntries.length === 0
+              ? 'No entries to draw from.'
+              : 'Everyone who entered has already won a previous round.'}
           </p>
         )}
       </div>
@@ -124,76 +109,13 @@ export default async function DrawPage({
       <DrawStage
         raffleId={raffle.id}
         pool={pool}
-        winners={revealed}
+        drawnWinners={drawnWinners}
+        targetCount={targetCount}
         primaryColor={raffle.primary_color}
         accentColor={raffle.accent_color}
         spinStyle={raffle.spin_style}
-        freshDraw={freshDraw}
+        status={raffle.status}
       />
     </div>
   );
-}
-
-async function drawAndPersist(
-  supabase: ReturnType<typeof createClient>,
-  raffle: RaffleRow,
-  pool: EntryRow[]
-): Promise<RevealedWinner[]> {
-  const target =
-    raffle.winner_mode === 'count'
-      ? raffle.winner_count
-      : Math.ceil((pool.length * raffle.winner_percent) / 100);
-  const n = Math.max(1, Math.min(target, pool.length));
-
-  const shuffled = [...pool];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = secureRandomInt(i + 1);
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const picked = shuffled.slice(0, n);
-
-  const prizes = prizesForWinners(raffle, n);
-
-  const rows = picked.map((entry, i) => ({
-    raffle_id: raffle.id,
-    entry_id: entry.id,
-    position: i + 1,
-    round: raffle.current_round,
-    prize: prizes[i],
-  }));
-
-  const { error } = await supabase.from('winners').insert(rows);
-  if (error) throw new Error(`Failed to persist winners: ${error.message}`);
-
-  return picked.map((entry, i) => ({
-    entry_id: entry.id,
-    position: i + 1,
-    first_name: entry.first_name,
-    last_name: entry.last_name,
-    prize: prizes[i],
-  }));
-}
-
-function prizesForWinners(raffle: RaffleRow, n: number): (string | null)[] {
-  if (raffle.prize_mode === 'same') {
-    return Array.from({ length: n }, () => raffle.prize_text);
-  }
-  if (raffle.prize_mode === 'per' && raffle.prize_list) {
-    const lines = raffle.prize_list
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-    return Array.from({ length: n }, (_, i) => lines[i] ?? null);
-  }
-  return Array.from({ length: n }, () => null);
-}
-
-function secureRandomInt(maxExclusive: number): number {
-  // Rejection-sampled to remove modulo bias for this small range.
-  const buf = new Uint32Array(1);
-  const limit = Math.floor(0xffffffff / maxExclusive) * maxExclusive;
-  while (true) {
-    crypto.getRandomValues(buf);
-    if (buf[0] < limit) return buf[0] % maxExclusive;
-  }
 }

@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import confetti from 'canvas-confetti';
 import { spinWheel } from '@/lib/raffle/spin-wheel';
-import { completeRaffleAction } from './actions';
+import {
+  completeRaffleAction,
+  drawNextWinnerAction,
+  type DrawnWinner,
+} from './actions';
 
 export interface PoolEntry {
   id: string;
@@ -19,60 +23,60 @@ export interface RevealedWinner {
   prize: string | null;
 }
 
-type Phase = 'idle' | 'spinning' | 'revealed' | 'done';
+type Phase = 'idle' | 'spinning' | 'revealed';
 
 const SPIN_TOTAL_MS = 2800;
 const REVEAL_HOLD_MS = 1800;
-// Wheel runs ~6s per spec; let it land before the reveal hold.
-const WHEEL_HOLD_MS = 1800;
 
 export function DrawStage({
   raffleId,
   pool,
-  winners,
+  drawnWinners,
+  targetCount,
   primaryColor,
   accentColor,
   spinStyle,
-  freshDraw,
+  status,
 }: {
   raffleId: string;
   pool: PoolEntry[];
-  winners: RevealedWinner[];
+  drawnWinners: RevealedWinner[];
+  targetCount: number;
   primaryColor: string;
   accentColor: string;
   spinStyle: string;
-  freshDraw: boolean;
+  status: string;
 }) {
-  // On refresh after a draw, skip the animation entirely.
-  const [phase, setPhase] = useState<Phase>(freshDraw ? 'spinning' : 'done');
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [reelName, setReelName] = useState<string>(() =>
-    freshDraw && pool.length > 0
-      ? `${pool[0].first_name} ${pool[0].last_name}`
-      : ''
-  );
-  const [revealedSoFar, setRevealedSoFar] = useState<RevealedWinner[]>(
-    freshDraw ? [] : winners
-  );
+  // Side panel hydrates with persisted winners; we append on each spin.
+  const [winners, setWinners] = useState<RevealedWinner[]>(drawnWinners);
+  // The just-drawn winner we're animating to. Cleared after reveal lands.
+  const [pending, setPending] = useState<DrawnWinner | null>(null);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [reelName, setReelName] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const tickRef = useRef<number | null>(null);
   const wheelCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // Reel cycling during 'spinning'.
-  useEffect(() => {
-    if (phase !== 'spinning') return;
-    if (pool.length === 0 || winners.length === 0) return;
+  const remaining = targetCount - winners.length;
+  const limitReached = remaining <= 0;
+  const noPool = pool.length === 0;
+  const isComplete = status === 'complete';
 
-    const target = winners[currentIdx];
+  // Animation: only runs while we have a `pending` winner and phase === 'spinning'.
+  useEffect(() => {
+    if (phase !== 'spinning' || !pending) return;
+    if (pool.length === 0) {
+      setPhase('revealed');
+      return;
+    }
 
     // ── Wheel branch ──────────────────────────────────────────────────────
     if (spinStyle === 'wheel') {
       const canvas = wheelCanvasRef.current;
-      const winnerIndex = pool.findIndex((p) => p.id === target.entry_id);
+      const winnerIndex = pool.findIndex((p) => p.id === pending.entry_id);
       if (!canvas || winnerIndex < 0) {
-        // Canvas not mounted yet, or winner not in pool (shouldn't happen
-        // — if we reach this branch the data is malformed). Skip animation
-        // and reveal so the show goes on.
         setPhase('revealed');
         return;
       }
@@ -91,36 +95,31 @@ export function DrawStage({
       return () => handle.cancel();
     }
 
-    // ── Slot/flash/shuffle branch (existing reel) ─────────────────────────
+    // ── Slot/flash/shuffle branch ─────────────────────────────────────────
     const start = performance.now();
     let interval = 50;
 
     const step = () => {
       const elapsed = performance.now() - start;
       if (elapsed >= SPIN_TOTAL_MS) {
-        setReelName(`${target.first_name} ${target.last_name}`);
+        setReelName(`${pending.first_name} ${pending.last_name}`);
         setPhase('revealed');
         return;
       }
       const random = pool[Math.floor(Math.random() * pool.length)];
       setReelName(`${random.first_name} ${random.last_name}`);
-      // ease-out: interval grows, ticks slow down toward the end
       interval = Math.min(50 + (elapsed / SPIN_TOTAL_MS) * 200, 250);
       tickRef.current = window.setTimeout(step, interval);
     };
-
     step();
     return () => {
       if (tickRef.current !== null) window.clearTimeout(tickRef.current);
     };
-  }, [phase, currentIdx, pool, winners, spinStyle, primaryColor, accentColor]);
+  }, [phase, pending, pool, spinStyle, primaryColor, accentColor]);
 
-  // After reveal: confetti, then advance.
+  // After reveal: confetti, append to side panel, settle back to idle.
   useEffect(() => {
-    if (phase !== 'revealed') return;
-
-    const winner = winners[currentIdx];
-    setRevealedSoFar((prev) => [...prev, winner]);
+    if (phase !== 'revealed' || !pending) return;
 
     confetti({
       particleCount: 120,
@@ -130,20 +129,48 @@ export function DrawStage({
       colors: [primaryColor, accentColor, '#FFFFFF'],
     });
 
+    // Append (dedupe defensively in case Realtime / refresh races).
+    setWinners((prev) =>
+      prev.some((w) => w.position === pending.position)
+        ? prev
+        : [...prev, {
+            entry_id: pending.entry_id,
+            position: pending.position,
+            first_name: pending.first_name,
+            last_name: pending.last_name,
+            prize: pending.prize,
+          }]
+    );
+
     const t = window.setTimeout(() => {
-      if (currentIdx + 1 < winners.length) {
-        setCurrentIdx((i) => i + 1);
-        setPhase('spinning');
-      } else {
-        setPhase('done');
-      }
+      setPending(null);
+      setPhase('idle');
     }, REVEAL_HOLD_MS);
 
     return () => window.clearTimeout(t);
-  }, [phase, currentIdx, winners, primaryColor, accentColor]);
+  }, [phase, pending, primaryColor, accentColor]);
 
-  // Empty pool — nothing to draw.
-  if (pool.length === 0 || winners.length === 0) {
+  function handleSpin() {
+    setError(null);
+    startTransition(async () => {
+      const result = await drawNextWinnerAction(raffleId);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.done) {
+        // Server says target is reached — sync local state in case it drifted.
+        return;
+      }
+      if (result.winner) {
+        setPending(result.winner);
+        setPhase('spinning');
+      }
+    });
+  }
+
+  // Empty everything — show the no-draw card.
+  if (noPool && winners.length === 0) {
     return (
       <div className="card text-center max-w-xl mx-auto">
         <p className="eyebrow mb-3">No draw</p>
@@ -151,22 +178,21 @@ export function DrawStage({
           No entries to draw from.
         </h2>
         <p className="text-mist leading-relaxed">
-          Reopen entries from the SQL editor (set status back to
-          &lsquo;collecting&rsquo;) and share the QR code, then come back.
+          Reopen this raffle from the admin view to collect entries again.
         </p>
       </div>
     );
   }
 
   const showingReel = phase === 'spinning' || phase === 'revealed';
-  const currentWinner = winners[currentIdx];
+  const inFlight = isPending || showingReel;
 
   return (
     <div className="max-w-3xl mx-auto">
-      {showingReel && (
+      {showingReel && pending && (
         <div className="text-center mb-12">
           <p className="eyebrow mb-4">
-            Winner #{currentWinner.position} of {winners.length}
+            Winner #{pending.position} of {targetCount}
           </p>
 
           {spinStyle === 'wheel' ? (
@@ -183,10 +209,10 @@ export function DrawStage({
               </div>
               {phase === 'revealed' && (
                 <div
-                  className="font-heading font-bold text-3xl md:text-5xl tracking-tighter mt-6 transition-all"
+                  className="font-heading font-bold text-3xl md:text-5xl tracking-tighter mt-6"
                   style={{ color: primaryColor }}
                 >
-                  {currentWinner.first_name} {currentWinner.last_name}
+                  {pending.first_name} {pending.last_name}
                 </div>
               )}
             </>
@@ -203,19 +229,58 @@ export function DrawStage({
             </div>
           )}
 
-          {currentWinner.prize && phase === 'revealed' && (
-            <p className="text-mist mt-4 text-lg">{currentWinner.prize}</p>
+          {pending.prize && phase === 'revealed' && (
+            <p className="text-mist mt-4 text-lg">{pending.prize}</p>
           )}
         </div>
       )}
 
-      {revealedSoFar.length > 0 && (
+      {!showingReel && !isComplete && (
+        <div className="text-center mb-10">
+          {!limitReached && !noPool ? (
+            <>
+              <button
+                type="button"
+                onClick={handleSpin}
+                disabled={inFlight}
+                className="btn btn-primary btn-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isPending
+                  ? 'Drawing…'
+                  : winners.length === 0
+                  ? `Spin for winner #1 of ${targetCount}`
+                  : `Spin for winner #${winners.length + 1} of ${targetCount}`}
+              </button>
+              <p className="mt-3 text-sm text-mist">
+                {remaining === 1
+                  ? '1 winner left to draw.'
+                  : `${remaining} winners left to draw.`}
+              </p>
+            </>
+          ) : limitReached ? (
+            <p className="eyebrow text-shadow">
+              All {targetCount} winners drawn.
+            </p>
+          ) : (
+            <p className="eyebrow text-shadow">
+              No eligible entrants left in the pool.
+            </p>
+          )}
+          {error && (
+            <p className="mt-4 text-sm text-shadow border border-shadow inline-block px-3 py-2 rounded">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+
+      {winners.length > 0 && (
         <div className="mb-10">
           <h3 className="font-heading font-bold text-2xl tracking-tight mb-4">
-            {phase === 'done' ? 'Winners' : 'So far'}
+            {isComplete ? 'Winners' : 'Drawn so far'}
           </h3>
           <ol className="bg-white border border-border rounded-lg divide-y divide-border">
-            {revealedSoFar.map((w) => (
+            {winners.map((w) => (
               <li
                 key={w.position}
                 className="px-5 py-4 flex items-center justify-between gap-4"
@@ -245,11 +310,11 @@ export function DrawStage({
         </div>
       )}
 
-      {phase === 'done' && (
+      {!isComplete && winners.length > 0 && !showingReel && (
         <div className="flex justify-center">
           <form action={completeRaffleAction}>
             <input type="hidden" name="raffleId" value={raffleId} />
-            <button type="submit" className="btn btn-primary btn-lg">
+            <button type="submit" className="btn btn-ghost btn-lg">
               Mark draw complete
             </button>
           </form>
