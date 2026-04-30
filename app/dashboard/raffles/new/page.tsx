@@ -27,6 +27,7 @@ export default function NewRafflePage() {
         action={createRaffleAction}
         submitLabel="Create raffle"
         pendingLabel="Creating raffle…"
+        showSlugField
       />
     </div>
   );

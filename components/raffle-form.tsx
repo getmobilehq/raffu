@@ -35,6 +35,7 @@ export function RaffleForm({
   initialValues = {},
   submitLabel,
   pendingLabel,
+  showSlugField = false,
 }: {
   action: (
     prev: RaffleSetupState,
@@ -43,6 +44,9 @@ export function RaffleForm({
   initialValues?: Partial<RaffleSetupState>;
   submitLabel: string;
   pendingLabel: string;
+  /** Show an optional "URL slug" input. Edit mode keeps slugs immutable
+   *  so already-shared QR codes stay valid, hence the prop. */
+  showSlugField?: boolean;
 }) {
   const [state, formAction] = useFormState(action, initialState);
 
@@ -87,6 +91,10 @@ export function RaffleForm({
           className="field-input"
         />
       </div>
+
+      {showSlugField && (
+        <SlugField defaultValue={state.slug ?? initialValues.slug ?? ''} />
+      )}
 
       <fieldset className="mb-8">
         <legend className="field-label">Brand colors</legend>
@@ -240,6 +248,44 @@ export function RaffleForm({
 
       <SubmitButton label={submitLabel} pendingLabel={pendingLabel} />
     </form>
+  );
+}
+
+function SlugField({ defaultValue }: { defaultValue: string }) {
+  const [value, setValue] = useState(defaultValue);
+
+  // Live sanitisation: lowercase, replace runs of non-slug chars with a single
+  // hyphen, strip leading/trailing hyphens. Mirror the server's slugify() so
+  // the preview matches what gets stored.
+  function sanitise(input: string) {
+    return input
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+/, '')
+      .slice(0, 40);
+  }
+
+  return (
+    <div className="mb-6">
+      <label htmlFor="slug" className="field-label">
+        URL slug <span className="text-mist normal-case">(optional)</span>
+      </label>
+      <input
+        id="slug"
+        name="slug"
+        type="text"
+        maxLength={40}
+        value={value}
+        onChange={(e) => setValue(sanitise(e.target.value))}
+        placeholder="friday-night"
+        className="field-input font-mono text-sm"
+      />
+      <p className="mt-2 text-xs text-mist">
+        {value
+          ? `Share link will be /r/${value}`
+          : 'Leave blank to generate one from the name. 4–40 lowercase letters, digits, and hyphens.'}
+      </p>
+    </div>
   );
 }
 

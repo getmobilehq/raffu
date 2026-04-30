@@ -11,6 +11,7 @@ export interface RaffleSetupState {
   error?: string;
   // Echo back so the form can repopulate on validation failure
   name?: string;
+  slug?: string;
   primaryColor?: string;
   accentColor?: string;
   winnerMode?: WinnerMode;
@@ -55,11 +56,14 @@ function isSpinStyle(v: unknown): v is SpinStyle {
   return v === 'slot' || v === 'flash' || v === 'shuffle' || v === 'wheel';
 }
 
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 export async function createRaffleAction(
   _prev: RaffleSetupState,
   formData: FormData
 ): Promise<RaffleSetupState> {
   const name = String(formData.get('name') ?? '').trim();
+  const customSlugRaw = String(formData.get('slug') ?? '').trim().toLowerCase();
   const primaryColorRaw = String(formData.get('primaryColor') ?? '').trim();
   const accentColorRaw = String(formData.get('accentColor') ?? '').trim();
   const winnerModeRaw = formData.get('winnerMode');
@@ -91,6 +95,7 @@ export async function createRaffleAction(
 
   const echo: RaffleSetupState = {
     name,
+    slug: customSlugRaw,
     primaryColor,
     accentColor,
     winnerMode,
@@ -106,6 +111,18 @@ export async function createRaffleAction(
     return { ...echo, error: 'Give the raffle a name (at least 2 characters).' };
   if (name.length > 80)
     return { ...echo, error: 'Name must be 80 characters or fewer.' };
+  if (customSlugRaw) {
+    if (customSlugRaw.length < 4)
+      return { ...echo, error: 'Slug must be at least 4 characters.' };
+    if (customSlugRaw.length > 40)
+      return { ...echo, error: 'Slug must be 40 characters or fewer.' };
+    if (!SLUG_RE.test(customSlugRaw))
+      return {
+        ...echo,
+        error:
+          'Slug can use lowercase letters, digits, and single hyphens only.',
+      };
+  }
   if (prizeMode === 'same' && !prizeTextRaw)
     return { ...echo, error: 'Describe the prize.' };
   if (prizeMode === 'per' && !prizeListRaw)
@@ -124,8 +141,16 @@ export async function createRaffleAction(
     return { ...echo, error: 'Your session expired. Please log in again.' };
   }
 
-  const baseSlug = slugify(name) || 'raffle';
-  const slug = `${baseSlug}-${randomSuffix()}`;
+  // Custom slug as-is; otherwise auto-generate name-XXXXX (random suffix
+  // backstops the unique constraint for the auto path; custom slugs collide
+  // user-to-user but the friendly error below covers it).
+  let slug: string;
+  if (customSlugRaw) {
+    slug = customSlugRaw;
+  } else {
+    const baseSlug = slugify(name) || 'raffle';
+    slug = `${baseSlug}-${randomSuffix()}`;
+  }
 
   const { data: inserted, error } = await supabase
     .from('raffles')
@@ -149,7 +174,9 @@ export async function createRaffleAction(
   if (error) {
     const friendly =
       error.code === '23505'
-        ? 'That name produced a slug clash. Tweak the name and try again.'
+        ? customSlugRaw
+          ? 'That slug is already in use. Try another.'
+          : 'That name produced a slug clash. Tweak the name and try again.'
         : error.message;
     return { ...echo, error: friendly };
   }
